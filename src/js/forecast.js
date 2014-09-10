@@ -1,14 +1,4 @@
-(function (root, factory) {
-    if (typeof define === 'function' && define.amd) {
-        define(function() {
-            return factory(root);
-        });
-    } else if (typeof exports === 'object') {
-        module.exports = factory;
-    } else {
-        root.Condense = factory(root);
-    }
-})(this, function (el) {
+var Condense = function () {
 
     // Supported languages
     // en : English
@@ -32,9 +22,10 @@
 
     var languages = [ 'en', 'ru', 'it', 'es', 'sp', 'uk', 'ua', 'de', 'pt', 'ro', 'pl', 'fi', 'nl', 'fr', 'bg', 'sv',
         'se', 'zh_tw', 'zh', 'zh_cn', 'tr', 'ca' ],
-        windDirections = {},
+        windDirections = [ 'N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW' ],
         baseUrl = 'http://api.openweathermap.org/data/2.5/weather?'
-        imgUrl = 'images/condense/';
+        imgUrl = 'images/condense/',
+        imgExtension = '.jpg';
 
     var _set = function (element) {
         var location,
@@ -60,13 +51,13 @@
             lang: lang,
             isMetric: isMetric,
             location: location
-        }, function (r) { console.log(r) });
+        }, function (response) { _insertData(element, response) });
     };
 
     var _get = function (options, callback) {
         var lang = options.lang,
             units = (options.isMetric) ? 'metric' : 'imperial',
-            location = (options.location === '') ? '' : _getLocationURI(options.location),
+            location = options.location,
             url;
 
         if (languages.indexOf(lang) === -1) {
@@ -89,6 +80,7 @@
             }
         } else {
             // make the request based on the location set in the options object
+            location = _getLocationURI(location);
             url = baseUrl + location + '&lang=' + lang + '&units=' + units;
             _request(encodeURI(url), callback);
         };
@@ -100,7 +92,7 @@
 
         // if location is an object, take latitude and longitude
         if (typeof location === 'object'){
-            return 'lat=' + location.lat + '&' + 'lon=' + location.lon;
+            return 'lat=' + location.lat + '&lon=' + location.lon;
         };
 
         // if location is string, take it as a city
@@ -108,7 +100,11 @@
             return 'q=' + location;
         }
     };
-    
+
+    var _getWindDirection = function (deg) {
+        var index = Math.round(deg/45);
+        return windDirections[index] || 'N';
+    };
 
     var _request = function (url, callback){
         var xmr;
@@ -130,10 +126,42 @@
         xmr.send(null);
     };
 
+    var _parseInfo =  function (obj) {
+        if (obj.cod === 200) {
+            return {
+                data: {
+                    temperature: Math.round(obj.main.temp),
+                    min: Math.round(obj.main.temp_min),
+                    max: Math.round(obj.main.temp_max),
+                    pressure: obj.main.pressure,
+                    humidity: obj.main.humidity,
+                    city: obj.name,
+                    country: obj.sys.country,
+                    description: obj.weather[0].description,
+                    code: obj.weather[0].id,
+                    windSpeed: obj.wind.speed,
+                    windDirection: _getWindDirection(obj.wind.deg),
+                },
+                imageSrc: imgUrl + obj.weather[0].icon + imgExtension
+            }
+        } else {
+            throw 'The place you request could not be found';
+            return;
+        }
+    };
+
+    var _insertData = function (element, obj) {
+        obj = _parseInfo(obj);
+        for (key in obj.data) {
+            var selector = '[data-condense-' + key + ']',
+                dataElement = element.querySelector(selector);
+            if (dataElement) {
+                dataElement.innerHTML = obj.data[key];
+            }
+        }
+    }
+
     return {
         set: _set
     }
-});
-
-var w = document.getElementById('sample');
-Condense.set(w);
+};

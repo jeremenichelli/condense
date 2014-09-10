@@ -5,7 +5,28 @@
     <title>Forecast widget</title>
 </head>
 <body>
-    <div id="sample" data-condense-location="New York" data-condense-metric="true"></div>
+    <div id="sample" data-condense-location="Rosario Argentina" data-condense-metric="true" data-condense-language="sp">
+        <h1 data-condense-city></h1>
+        <h2 data-condense-country></h2>
+        <img src="" data-condense-image alt="">
+        <p data-condense-description></p>
+        <p>HUMIDITY <span data-condense-humidity></span>%</p>
+        <p>PRESSURE <span data-condense-pressure></span>h</p>
+        <ul>
+            <li>
+                <h3 style="display: inline-block" data-condense-temperature></h3>ºC
+            </li>
+            <li>
+                MIN: <span data-condense-min></span>
+            </li>
+            <li>
+                MAX: <span data-condense-max></span>
+            </li>
+        </ul>
+        <p>
+            WIND <span data-condense-windSpeed></span>km/h <span data-condense-windDirection></span>
+        </p>
+    </div>
     <script src="src/js/forecast.js"></script>
 </body>
 </html>
