@@ -1,4 +1,18 @@
-var Condense = function () {
+// Condense - Jeremias Menichelli
+// https://www.github.com/jeremenichelli/condense - MIT License
+(function(root, factory) {
+    'use strict';
+    if (typeof define === 'function' && define.amd) {
+        define(function() {
+            return factory(root);
+        });
+    } else if (typeof exports === 'object') {
+        module.exports = factory;
+    } else {
+        root.Condense = factory(root);
+    }
+})(this, function () {
+    'use strict';
 
     // Supported languages
     // en : English
@@ -19,14 +33,15 @@ var Condense = function () {
     // zh/zh_cn: Chinese Simplified
     // tr: Turkish
     // ca: Catalan
-
+    
     var languages = [ 'en', 'ru', 'it', 'es', 'sp', 'uk', 'ua', 'de', 'pt', 'ro', 'pl', 'fi', 'nl', 'fr', 'bg', 'sv',
         'se', 'zh_tw', 'zh', 'zh_cn', 'tr', 'ca' ],
         windDirections = [ 'N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW' ],
-        baseUrl = 'http://api.openweathermap.org/data/2.5/weather?'
-        imgUrl = 'images/condense/',
-        imgExtension = '.jpg';
+        baseUrl = 'http://api.openweathermap.org/data/2.5/weather?',
+        imgUrl = 'img/',
+        imgExtension = '.png';
 
+    // set data from element
     var _set = function (element) {
         var location,
             isMetric,
@@ -42,8 +57,8 @@ var Condense = function () {
 
         lang = element.getAttribute('data-condense-language');
         if (!lang || languages.indexOf(lang) === -1) {
-            lang = 'en'
-        };
+            lang = 'en';
+        }
 
         isMetric = element.getAttribute('data-condense-metric') === 'true' ? true : false;
 
@@ -51,49 +66,39 @@ var Condense = function () {
             lang: lang,
             isMetric: isMetric,
             location: location
-        }, function (response) { _insertData(element, response) });
+        }, function (response) { _insertData(element, response); });
     };
 
+    // build url and make the request
     var _get = function (options, callback) {
         var lang = options.lang,
             units = (options.isMetric) ? 'metric' : 'imperial',
             location = options.location,
             url;
 
-        if (languages.indexOf(lang) === -1) {
-            throw 'Language not supported';
-            return;
-        };
-
-        if (location === '') {
+        if (location === '' && 'geolocation' in navigator) {
             // if location is undefined, get location by geolocation API
-            if ('geolocation' in navigator) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    // make the request based on the geolocation
-                    location = 'lat=' + position.coords.latitude + '&' + 'lon=' + position.coords.longitude;
-                    url = baseUrl + location + '&lang=' + lang + '&units=' + units;
-                    _request(encodeURI(url), callback);
-                });
-            } else {
-                throw 'Sorry, we couldn\'t determinate your location';
-                return;
-            }
+            navigator.geolocation.getCurrentPosition(function(position) {
+                // make the request based on the geolocation
+                location = 'lat=' + position.coords.latitude + '&' + 'lon=' + position.coords.longitude;
+                url = baseUrl + location + '&lang=' + lang + '&units=' + units;
+                _request(encodeURI(url), callback);
+            });
         } else {
             // make the request based on the location set in the options object
             location = _getLocationURI(location);
             url = baseUrl + location + '&lang=' + lang + '&units=' + units;
             _request(encodeURI(url), callback);
-        };
+        }
     };
 
+    // build location parameter
     var _getLocationURI = function (location) {
-        var lat,
-            lon;
 
         // if location is an object, take latitude and longitude
         if (typeof location === 'object'){
             return 'lat=' + location.lat + '&lon=' + location.lon;
-        };
+        }
 
         // if location is string, take it as a city
         if (typeof location === 'string') {
@@ -101,11 +106,13 @@ var Condense = function () {
         }
     };
 
+    // get wind direction according to degrees
     var _getWindDirection = function (deg) {
         var index = Math.round(deg/45);
         return windDirections[index] || 'N';
     };
 
+    // request data
     var _request = function (url, callback){
         var xmr;
 
@@ -121,18 +128,21 @@ var Condense = function () {
                     callback(JSON.parse(response));
                 }
             }
-        }
+        };
         xmr.open('GET', url, true);
         xmr.send(null);
     };
 
+    // parse response obj in a single data
     var _parseInfo =  function (obj) {
         if (obj.cod === 200) {
             return {
                 data: {
                     temperature: Math.round(obj.main.temp),
+                    /*jshint camelcase: false */
                     min: Math.round(obj.main.temp_min),
                     max: Math.round(obj.main.temp_max),
+                    /*jshint camelcase: true */
                     pressure: obj.main.pressure,
                     humidity: obj.main.humidity,
                     city: obj.name,
@@ -140,28 +150,35 @@ var Condense = function () {
                     description: obj.weather[0].description,
                     code: obj.weather[0].id,
                     windSpeed: obj.wind.speed,
-                    windDirection: _getWindDirection(obj.wind.deg),
+                    windDirection: _getWindDirection(obj.wind.deg)
                 },
                 imageSrc: imgUrl + obj.weather[0].icon + imgExtension
-            }
+            };
         } else {
             throw 'The place you request could not be found';
-            return;
         }
     };
 
+    // data binding
     var _insertData = function (element, obj) {
         obj = _parseInfo(obj);
-        for (key in obj.data) {
+        for (var key in obj.data) {
             var selector = '[data-condense-' + key + ']',
                 dataElement = element.querySelector(selector);
             if (dataElement) {
                 dataElement.innerHTML = obj.data[key];
             }
         }
-    }
 
-    return {
-        set: _set
-    }
-};
+        var img = element.querySelector('[data-condense-icon]');
+        if (img) {
+            img.src = obj.imageSrc;
+        }
+    };
+
+    // return constructor
+    var _factory = function () {};
+    _factory.prototype.set = _set;
+
+    return _factory;
+});

@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>Forecast widget</title>
+    <script src="dist/condense.min.js"></script>
 </head>
 <body>
-    <div id="sample" data-condense-location="Rosario Argentina" data-condense-metric="true" data-condense-language="sp">
+    <div id="sample" data-condense-location="San Lorenzo Argentina" data-condense-metric="true" data-condense-language="sp">
         <h1 data-condense-city></h1>
-        <h2 data-condense-country></h2>
-        <img src="" data-condense-image alt="">
+        <h1 data-condense-country></h1>
+        <img src="" data-condense-icon alt="" width="150">
         <p data-condense-description></p>
         <p>HUMIDITY <span data-condense-humidity></span>%</p>
         <p>PRESSURE <span data-condense-pressure></span>h</p>
@@ -27,6 +28,5 @@
             WIND <span data-condense-windSpeed></span>km/h <span data-condense-windDirection></span>
         </p>
     </div>
-    <script src="src/js/forecast.js"></script>
 </body>
 </html>
