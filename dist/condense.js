@@ -42,7 +42,7 @@
         imgExtension = '.png';
 
     // set data from element
-    var _set = function (element) {
+    var _set = function (element, onload) {
         var location,
             isMetric,
             lang;
@@ -66,7 +66,7 @@
             lang: lang,
             isMetric: isMetric,
             location: location
-        }, function (response) { _insertData(element, response); });
+        }, function (response) { _insertData(element, response, onload); });
     };
 
     // build url and make the request
@@ -160,7 +160,7 @@
     };
 
     // data binding
-    var _insertData = function (element, obj) {
+    var _insertData = function (element, obj, onload) {
         obj = _parseInfo(obj);
         for (var key in obj.data) {
             var selector = '[data-condense-' + key + ']',
@@ -173,6 +173,13 @@
         var img = element.querySelector('[data-condense-icon]');
         if (img) {
             img.src = obj.imageSrc;
+            if (onload) {
+                img.onload = onload;
+            }
+        } else {
+            if (onload) {
+                onload.apply(null, arguments);
+            }
         }
     };
 
