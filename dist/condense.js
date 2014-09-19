@@ -1,5 +1,67 @@
 // Condense - Jeremias Menichelli
 // https://www.github.com/jeremenichelli/condense - MIT License
+// jabiru - Jeremias Menichelli
+// https://github.com/jeremenichelli/jabiru - MIT License
+(function (root, factory) {
+    'use strict';
+    if (typeof define === 'function' && define.amd) {
+        define(function() {
+            return factory(root);
+        });
+    } else if (typeof exports === 'object') {
+        module.exports = factory;
+    } else {
+        root.jabiru = factory(root);
+    }
+})(this, function () {
+    'use strict';
+
+    var cName = 'jabiru',
+        cNumber = 0;
+
+    var _get = function (baseUrl, callback) {
+        var script = document.createElement('script'),
+            callbackId = cName + cNumber;
+
+        // increase callback number
+        cNumber++;
+
+        // make padding method global
+        window[callbackId] = function (data) {
+            if (typeof callback === 'function') {
+                callback(data);
+            } else {
+                console.error('You must specify a method as a callback');
+            }
+        };
+
+        function onScript (responseData) {
+            // unable callback
+            window[callbackId] = responseData = null;
+
+            // erase script element
+            script.parentNode.removeChild(script);
+        }
+
+        // attach event
+        script.onload = script.onreadystatechange = function (response) {
+            if ((!this.readyState || this.readyState === 'loaded' || this.readyState === 'complete')) {
+                if (script) {
+                    script.onreadystatechange = null;
+                }
+                onScript(response);
+            }
+        };
+
+        script.src = baseUrl + '&callback=' + callbackId;
+        document.head.appendChild(script);
+    };
+
+    return {
+        get: _get
+    };
+});
+
 (function(root, factory) {
     'use strict';
     if (typeof define === 'function' && define.amd) {
@@ -37,72 +99,155 @@
     var languages = [ 'en', 'ru', 'it', 'es', 'sp', 'uk', 'ua', 'de', 'pt', 'ro', 'pl', 'fi', 'nl', 'fr', 'bg', 'sv',
         'se', 'zh_tw', 'zh', 'zh_cn', 'tr', 'ca' ],
         windDirections = [ 'N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW' ],
+        units = [ 'metric', 'imperial' ],
         baseUrl = 'http://api.openweathermap.org/data/2.5/weather?',
         imgUrl = 'img/',
         imgExtension = '.png';
 
-    // set data from element
-    var _set = function (element, onload) {
-        var location,
-            isMetric,
-            lang;
-
-        location = element.getAttribute('data-condense-location');
-        if (!location && location !== '') {
-            location = {
-                lat: element.getAttribute('data-condense-latitude') || 0,
-                lon: element.getAttribute('data-condense-longitude') || 0
-            };
-        }
-
-        lang = element.getAttribute('data-condense-language');
-        if (!lang || languages.indexOf(lang) === -1) {
-            lang = 'en';
-        }
-
-        isMetric = element.getAttribute('data-condense-metric') === 'true' ? true : false;
-
-        _get({
-            lang: lang,
-            isMetric: isMetric,
-            location: location
-        }, function (response) { _insertData(element, response, onload); });
+    var Condense = function () {
+        this.rawData = null;
+        this.isSet = false;
     };
 
-    // build url and make the request
-    var _get = function (options, callback) {
-        var lang = options.lang,
-            units = (options.isMetric) ? 'metric' : 'imperial',
-            location = options.location,
-            url;
+    Condense.prototype = {
+        // set widget from element with an optional callback
+        set : function (element, onload) {
+            var widget = this;
 
-        if (location === '' && 'geolocation' in navigator) {
-            // if location is undefined, get location by geolocation API
-            navigator.geolocation.getCurrentPosition(function(position) {
-                // make the request based on the geolocation
-                location = 'lat=' + position.coords.latitude + '&' + 'lon=' + position.coords.longitude;
-                url = baseUrl + location + '&lang=' + lang + '&units=' + units;
-                _request(encodeURI(url), callback);
+            if (widget.isSet) {
+                console.error('The widget is already set');
+                return;
+            }
+
+            if (element) {
+                widget.element = element;
+                widget.onload = onload;
+                widget.get();
+            } else {
+                console.error('You must specify an HTML Element to build the widget');
+                return;
+            }
+        },
+        // get attributes from element and build request url
+        get : function () {
+            // get attributes
+            var widget = this,
+                element = widget.element,
+                location = element.getAttribute('data-condense-location'),
+                latitude = element.getAttribute('data-condense-latitude'),
+                longitude = element.getAttribute('data-condense-longitude'),
+                lang = element.getAttribute('data-condense-language'),
+                units = element.getAttribute('data-condense-units'),
+                locationURI,
+                languageURI,
+                unitsURI;
+
+            if (latitude && longitude) {
+                location = {
+                    lat: latitude,
+                    lon: longitude
+                };
+            }
+
+            // get location uri
+            locationURI = _getLocationURI(location);
+            languageURI = _getLanguageURI(lang);
+            unitsURI = _getUnitsURI(units);
+
+            // if location is not defined use geolocation
+            if (!location) {
+                if ('geolocation' in navigator) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        // build url with geolocation
+                        widget.url = baseUrl + '&lat=' + position.coords.latitude + '&lon=' +
+                            position.coords.longitude + languageURI + unitsURI;
+                        // make request
+                        widget.request();
+                    });
+                }
+            } else {
+                // build url
+                widget.url = baseUrl + locationURI + languageURI + unitsURI;
+                // make request
+                widget.request();
+            }
+        },
+        // make request
+        request : function () {
+            var widget = this,
+                url = encodeURI(widget.url);
+            // use jabiru for API call
+            jabiru.get(url, function (data) {
+                widget.isSet = true;
+                widget.rawData = data;
+                widget.insertData();
             });
-        } else {
-            // make the request based on the location set in the options object
-            location = _getLocationURI(location);
-            url = baseUrl + location + '&lang=' + lang + '&units=' + units;
-            _request(encodeURI(url), callback);
+        },
+        // find condense data elements and bind info
+        insertData : function () {
+            var obj = this.rawData,
+                element = this.element,
+                onload = this.onload;
+
+            // parse info for data binding
+            obj = _parseInfo(obj);
+
+            // data binding
+            for (var key in obj.data) {
+                var selector = '[data-condense-' + key + ']',
+                    dataElement = element.querySelector(selector);
+                if (dataElement) {
+                    dataElement.innerHTML = obj.data[key];
+                }
+            }
+
+            var img = element.querySelector('[data-condense-icon]');
+            
+            // checks if needs to fire a callback after loading the widget
+            if (onload) {
+                if (img) {
+                    // bind onload event to the img onload one
+                    img.onload = onload;
+                } else {
+                    onload();
+                }
+            }
+
+            if (img) {
+                img.src = obj.imageSrc;
+            }
+
+            this.rawData = null;
         }
     };
 
     // build location parameter
     var _getLocationURI = function (location) {
-
         // if location is an object, take latitude and longitude
-        if (typeof location === 'object'){
-            return 'lat=' + location.lat + '&lon=' + location.lon;
+        if (location && typeof location === 'object'){
+            return '&lat=' + location.lat + '&lon=' + location.lon;
         }
+        // if location is not set ask to geolocation API
+        if (location) {
+            return '&q=' + location;
+        }
+    };
 
-        // if location is string, take it as a city
-        if (typeof location === 'string') {
-            return 'q=' + location;
+    // build language parameter
+    var _getLanguageURI = function (l) {
+        if (!l || languages.indexOf(l) === -1) {
+            return '&lang=en';
+        } else {
+            return '&lang=' + l;
+        }
+    };
+
+    // build units parameter
+    var _getUnitsURI = function (u) {
+        if (!u || units.indexOf(u) === -1) {
+            return '';
+        } else {
+            return '&units=' + u;
         }
     };
 
@@ -112,37 +257,16 @@
         return windDirections[index] || 'N';
     };
 
-    // request data
-    var _request = function (url, callback){
-        var xmr;
-
-        if (window.XMLHttpRequest) {
-            xmr = new XMLHttpRequest();
-        } else if (window.ActiveXObject) {
-            xmr = new ActiveXObject("Microsoft.XMLHTTP");
-        }
-        xmr.onreadystatechange = function () {
-            if (xmr.readyState == 4){
-                var response = xmr.responseText;
-                if (typeof callback == 'function') {
-                    callback(JSON.parse(response));
-                }
-            }
-        };
-        xmr.open('GET', url, true);
-        xmr.send(null);
-    };
-
-    // parse response obj in a single data
+    // parse response obj in a single data structure
     var _parseInfo =  function (obj) {
         if (obj.cod === 200) {
             return {
                 data: {
                     temperature: Math.round(obj.main.temp),
-                    /*jshint camelcase: false */
+                    /* jshint camelcase: false */
                     min: Math.round(obj.main.temp_min),
                     max: Math.round(obj.main.temp_max),
-                    /*jshint camelcase: true */
+                    /* jshint camelcase: true */
                     pressure: obj.main.pressure,
                     humidity: obj.main.humidity,
                     city: obj.name,
@@ -159,33 +283,6 @@
         }
     };
 
-    // data binding
-    var _insertData = function (element, obj, onload) {
-        obj = _parseInfo(obj);
-        for (var key in obj.data) {
-            var selector = '[data-condense-' + key + ']',
-                dataElement = element.querySelector(selector);
-            if (dataElement) {
-                dataElement.innerHTML = obj.data[key];
-            }
-        }
-
-        var img = element.querySelector('[data-condense-icon]');
-        if (img) {
-            img.src = obj.imageSrc;
-            if (onload) {
-                img.onload = onload;
-            }
-        } else {
-            if (onload) {
-                onload.apply(null, arguments);
-            }
-        }
-    };
-
     // return constructor
-    var _factory = function () {};
-    _factory.prototype.set = _set;
-
-    return _factory;
+    return Condense;
 });

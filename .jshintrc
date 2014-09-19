@@ -22,7 +22,8 @@
         "define": true,
         "window": true,
         "navigator": true,
-        "ActiveXObject": true,
-        "XMLHttpRequest": true
+        "document": true,
+        "console": true,
+        "jabiru": true
     }
 }
