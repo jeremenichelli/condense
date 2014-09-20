@@ -6,7 +6,8 @@
     <script src="dist/condense.js"></script>
 </head>
 <body>
-    <div id="sample" data-condense-location="San Lorenzo Argentina" data-condense-units="metric">
+    <div id="sample" data-condense-location="" data-condense-units="metric">
+        <h3 data-condense-message></h3>
         <h1 data-condense-city></h1>
         <h1 data-condense-country></h1>
         <img src="" data-condense-icon alt="" width="150">
@@ -29,8 +30,11 @@
         </p>
     </div>
     <script>
-        var current = new Condense();
-        current.set(document.getElementById('sample'));
+        var current = new Condense(),
+            msgeBox = document.querySelector('[data-condense-message]');
+        current.set(document.getElementById('sample'), function () {
+            msgeBox.style.display = 'none';
+        });
     </script>
 </body>
 </html>

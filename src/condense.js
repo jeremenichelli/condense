@@ -105,6 +105,7 @@
     var Condense = function () {
         this.rawData = null;
         this.isSet = false;
+        this.hasMessageBox = false;
     };
 
     Condense.prototype = {
@@ -118,6 +119,10 @@
             }
 
             if (element) {
+                widget.messageBox = element.querySelector('[data-condense-message]');
+                if (widget.messageBox) {
+                    widget.hasMessageBox = true;
+                }
                 widget.element = element;
                 widget.onload = onload;
                 widget.get();
@@ -147,6 +152,8 @@
                 };
             }
 
+            widget.showMessage('Setting data and location');
+
             // get location uri
             locationURI = _getLocationURI(location);
             languageURI = _getLanguageURI(lang);
@@ -174,6 +181,9 @@
         request : function () {
             var widget = this,
                 url = encodeURI(widget.url);
+
+            widget.showMessage('Looking for the weather');
+
             // use jabiru for API call
             jabiru.get(url, function (data) {
                 widget.isSet = true;
@@ -183,12 +193,13 @@
         },
         // find condense data elements and bind info
         insertData : function () {
-            var obj = this.rawData,
-                element = this.element,
-                onload = this.onload;
+            var widget = this,
+                obj = widget.rawData,
+                element = widget.element,
+                onload = widget.onload;
 
             // parse info for data binding
-            obj = _parseInfo(obj);
+            obj = _parseInfo(obj, widget);
 
             // data binding
             for (var key in obj.data) {
@@ -215,7 +226,12 @@
                 img.src = obj.imageSrc;
             }
 
-            this.rawData = null;
+            widget.rawData = null;
+        },
+        showMessage : function (msg) {
+            if (this.hasMessageBox && typeof msg === 'string') {
+                this.messageBox.innerHTML = msg;
+            }
         }
     };
 
@@ -256,7 +272,7 @@
     };
 
     // parse response obj in a single data structure
-    var _parseInfo =  function (obj) {
+    var _parseInfo =  function (obj, widget) {
         if (obj.cod === 200) {
             return {
                 data: {
@@ -277,7 +293,7 @@
                 imageSrc: imgUrl + obj.weather[0].icon + imgExtension
             };
         } else {
-            throw 'The place you request could not be found';
+            widget.showMessage(obj.message);
         }
     };
 
