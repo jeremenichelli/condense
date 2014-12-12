@@ -1,67 +1,7 @@
 // Condense - Jeremias Menichelli
 // https://www.github.com/jeremenichelli/condense - MIT License
-// jabiru - Jeremias Menichelli
-// https://github.com/jeremenichelli/jabiru - MIT License
-(function (root, factory) {
-    'use strict';
-    if (typeof define === 'function' && define.amd) {
-        define(function() {
-            return factory(root);
-        });
-    } else if (typeof exports === 'object') {
-        module.exports = factory;
-    } else {
-        root.jabiru = factory(root);
-    }
-})(this, function () {
-    'use strict';
 
-    var cName = 'jabiru',
-        cNumber = 0;
-
-    var _get = function (baseUrl, callback) {
-        var script = document.createElement('script'),
-            callbackId = cName + cNumber;
-
-        // increase callback number
-        cNumber++;
-
-        // make padding method global
-        window[callbackId] = function (data) {
-            if (typeof callback === 'function') {
-                callback(data);
-            } else {
-                console.error('You must specify a method as a callback');
-            }
-        };
-
-        function onScript (responseData) {
-            // unable callback
-            window[callbackId] = responseData = null;
-
-            // erase script element
-            script.parentNode.removeChild(script);
-        }
-
-        // attach event
-        script.onload = script.onreadystatechange = function (response) {
-            if ((!this.readyState || this.readyState === 'loaded' || this.readyState === 'complete')) {
-                if (script) {
-                    script.onreadystatechange = null;
-                }
-                onScript(response);
-            }
-        };
-
-        script.src = baseUrl + '&callback=' + callbackId;
-        document.head.appendChild(script);
-    };
-
-    return {
-        get: _get
-    };
-});
-
+!function(e,t){"use strict";"function"==typeof define&&define.amd?define(function(){return t(e)}):"object"==typeof exports?module.exports=t:e.jabiru=t(e)}(this,function(){"use strict";var e,t,n,o=!1,a=document.head||document.getElementsByTagName("head")[0]||document.body,r=function(r,c){function i(e){s[d]=e=null,u.parentNode.removeChild(u)}var u=document.createElement("script"),d=e+t,s=o?window:window.jabiru,l=o?"":"jabiru.";t++,s[d]=function(e){"function"==typeof c?c(e):console.error("You must specify a method as a callback")},u.onload=u.onreadystatechange=function(e){this.readyState&&"loaded"!==this.readyState&&"complete"!==this.readyState||(u&&(u.onreadystatechange=null),i(e))},u.src=r+n+"="+l+d,a.appendChild(u)},c=function(n){"string"==typeof n?(e=n,t=0):console.error("Callback name must be a string")},i=function(e){"string"==typeof e?n=e:console.error("Query name must be a string")},u=function(){o=!0};return c("callback"),i("?callback"),{get:r,name:c,query:i,toGlobal:u}});
 (function(root, factory) {
     'use strict';
     if (typeof define === 'function' && define.amd) {
@@ -75,6 +15,11 @@
     }
 })(this, function () {
     'use strict';
+
+    // set jabiru config
+    jabiru.toGlobal();
+    jabiru.name('condense_callback');
+    jabiru.query('&callback');
 
     // Supported languages
     // en : English
@@ -213,9 +158,6 @@
             }
 
             var img = element.querySelector('[data-condense-icon]');
-
-            // erase messages
-            widget.showMessage('Loading widget');
             
             // checks if needs to fire a callback after loading the widget
             if (onload) {
