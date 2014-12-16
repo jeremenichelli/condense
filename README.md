@@ -30,9 +30,11 @@ First thing you need to do is to prepare the markup that will manage everything 
 
 If you don't specify the location the widget will ask the user to share the location.
 
+```html
 <div id="weather-widget" data-condense-language="en" data-condense-units="imperial">
     <!-- inner template -->
 </div>
+```
 
 
 ### Widget content
