@@ -53,7 +53,7 @@
 
     Condense.prototype = {
         // set widget from element with an optional callback
-        set : function (element, onload) {
+        set : function (element, onload, onerror) {
             var widget = this;
 
             if (widget.isSet) {
@@ -68,6 +68,7 @@
                 }
                 widget.element = element;
                 widget.onload = onload;
+                widget.onerror = onerror;
                 widget.get();
             } else {
                 console.error('You must specify an HTML Element to build the widget');
@@ -111,6 +112,11 @@
                             position.coords.longitude + languageURI + unitsURI;
                         // make request
                         widget.request();
+                    },
+                    function (err) {
+                        if (widget.onerror) {
+                            widget.onerror(err);
+                        }
                     });
                 }
             } else {
@@ -144,29 +150,31 @@
             // parse info for data binding
             obj = _parseInfo(obj, widget);
 
-            // data binding
-            for (var key in obj.data) {
-                var selector = '[data-condense-' + key + ']',
-                    dataElement = element.querySelector(selector);
-                if (dataElement) {
-                    dataElement.innerHTML = obj.data[key];
+            if (obj) {
+                // data binding
+                for (var key in obj.data) {
+                    var selector = '[data-condense-' + key + ']',
+                        dataElement = element.querySelector(selector);
+                    if (dataElement) {
+                        dataElement.innerHTML = obj.data[key];
+                    }
                 }
-            }
 
-            var img = element.querySelector('[data-condense-icon]');
-            
-            // checks if needs to fire a callback after loading the widget
-            if (onload) {
+                var img = element.querySelector('[data-condense-icon]');
+                
+                // checks if needs to fire a callback after loading the widget
+                if (onload) {
+                    if (img) {
+                        // bind onload event to the img onload one
+                        img.onload = onload;
+                    } else {
+                        onload();
+                    }
+                }
+
                 if (img) {
-                    // bind onload event to the img onload one
-                    img.onload = onload;
-                } else {
-                    onload();
+                    img.src = obj.imageSrc;
                 }
-            }
-
-            if (img) {
-                img.src = obj.imageSrc;
             }
 
             widget.rawData = null;
@@ -236,7 +244,9 @@
                 imageSrc: imgUrl + obj.weather[0].icon + imgExtension
             };
         } else {
-            widget.showMessage(obj.message);
+            if (widget.onerror) {
+                widget.onerror(obj.message);
+            }
         }
     };
 
